@@ -30,19 +30,27 @@ npm run lint    # eslint (typescript-eslint flat config)
 
 ## Features
 
-- **Two-zone venue** — a 52m x 6m x 24m space split by a partition wall with a
-  5m doorway at the center. Left zone (x<0) is the **recording studio**: wood
-  plank floors, acoustic-foam walls, control-room mixing desk with knobs,
-  nearfield + wall monitors, a "live room" window behind the desk, a
-  glass-walled **soundproof vocal booth**, and lounge/gear props (couch, 19"
-  racks, synth, drum kit, guitars, gold plaques). Right zone (x>0) is the
-  **DJ club**: concrete floor with an animated LED tile dance floor, raised DJ
-  stage with the two-deck board, an animated LED video wall, PA stacks, a bar
-  with glowing bottles, a lounge corner with neon sign, and a truss with
-  color-cycling spotlights. Player position is clamped to the room interior
-  and the partition (except the doorway). Bloom/vignette post-processing is
-  enabled on capable devices — append `?fx=0` to the URL to disable it (it is
-  also auto-disabled in XR sessions and on very low-end devices).
+- **Two separate environments** — a **recording studio** (24m x 6m x 16m) and
+  a **DJ club** (26m x 7m x 18m) in a dark, minimal, architectural style with
+  real Poly Haven CC0 textures. Each zone has a 3m x 8m black hallway ending
+  in a glowing **portal ring**: walk into it and the screen fades to black,
+  the other zone loads, and you spawn just outside its portal. Peers,
+  avatars, panels and audio are all filtered per-zone (you only see/hear
+  people in your environment). Append `?zone=club` to spawn in the club
+  (default is the studio).
+  - **Recording studio** — charcoal fabric acoustic walls framed by brushed
+    metal, dark wood floor, amber light cove, mixing desk + monitors, a glass
+    wall into a lit "live room" behind the desk, a big +z window overlooking
+    sky and ocean, a glass **soundproof vocal booth**, and black/chrome
+    lounge + gear props. Single accent: warm amber `#ffb454`.
+  - **DJ club** — near-black polished concrete, dark plaster walls, chrome PA
+    stacks + truss, a monochrome-blue pulsing LED dance floor, a blue/white
+    waveform LED wall, a bar, a lounge with a chrome ring sculpture, and a
+    wide opening behind the stage framing the night sky/ocean. Single
+    accent: royal blue `#1f3bff`.
+  - Bloom/vignette post-processing on capable devices — append `?fx=0` to
+    disable it (also auto-disabled in XR sessions and on very low-end
+    devices). Player movement is clamped to the zone's room + hallway.
 - **Vocal booth audio isolation** — when you are inside the booth, all remote
   audio from outside is low-pass filtered + attenuated, and vice versa
   (per-source `BiquadFilterNode`, evaluated each frame).
@@ -92,4 +100,11 @@ npm run lint    # eslint (typescript-eslint flat config)
 ## Rooms
 
 Share the URL — `?room=<name>` selects the room. Everyone with the same room
-name ends up in the same PeerJS mesh.
+name ends up in the same PeerJS mesh. `?zone=<studio|club>` selects the
+starting environment.
+
+## Texture credits
+
+World textures in `public/textures/` are CC0 assets from
+[Poly Haven](https://polyhaven.com) (see `public/textures/LICENSE.md`).
+Re-fetch them with `node scripts/fetch-textures.mjs`.

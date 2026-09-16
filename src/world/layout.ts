@@ -1,8 +1,9 @@
 import type { Vec3 } from '../state/playerStore';
 
-/** DJ stage in the club zone — shared by the stage mesh and the DJBoard. */
+/** DJ stage in the club zone (club centered at origin) — shared by the
+ *  stage mesh and the DJBoard. */
 export const DJ_STAGE = {
-  center: [14, 0, -8] as Vec3,
+  center: [0, 0, -6] as Vec3,
   size: [12, 0.5, 5] as Vec3,
 };
 

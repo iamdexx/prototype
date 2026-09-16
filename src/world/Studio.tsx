@@ -1,17 +1,27 @@
+import { Suspense } from 'react';
+import { useWorldStore } from '../state/worldStore';
 import { Shell } from './Shell';
 import { RecordingStudio } from './RecordingStudio';
 import { DJClub } from './DJClub';
+import { Hallway } from './Hallway';
+import { Outside } from './Outside';
+import { PortalTrigger } from './PortalTrigger';
 
-/** Two-zone venue: recording studio (x<0) + DJ club (x>0). */
+/**
+ * Two separate environments connected by a portal hallway; only the current
+ * zone is mounted. Textures stream in under Suspense.
+ */
 export function Studio() {
+  const zone = useWorldStore((s) => s.zone);
   return (
-    <group>
-      <Shell />
-      <RecordingStudio />
-      <DJClub />
-      {/* subtle fill light over the doorway */}
-      <ambientLight intensity={0.12} />
-      <pointLight position={[0, 4.5, 0]} intensity={8} distance={18} color="#c0c8ff" />
-    </group>
+    <Suspense fallback={null}>
+      <group>
+        <Outside zone={zone} />
+        <Shell zone={zone} />
+        {zone === 'studio' ? <RecordingStudio /> : <DJClub />}
+        <Hallway zone={zone} />
+        <PortalTrigger />
+      </group>
+    </Suspense>
   );
 }

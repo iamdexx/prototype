@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { isInsideBooth } from '../world/booth';
+import type { ZoneId } from '../world/zones';
 import type { Vec3 } from '../state/playerStore';
 import { useAudioSettings } from './audioSettingsStore';
 
@@ -10,6 +11,8 @@ interface SourceNodes {
   panner: PannerNode;
   /** for per-frame position updates */
   position: THREE.Vector3;
+  /** Which zone the source lives in; gain is 0 outside the local zone. */
+  zone: ZoneId;
 }
 
 /**
@@ -79,6 +82,7 @@ class AudioEngine {
       sourceGain,
       panner,
       position: new THREE.Vector3(0, 1.6, 0),
+      zone: 'studio',
     };
     this.sources.set(id, nodes);
     this.mediaSources.set(id, input);
@@ -105,6 +109,11 @@ class AudioEngine {
     this.mediaSources.delete(id);
   }
 
+  setSourceZone(id: string, zone: ZoneId) {
+    const n = this.sources.get(id);
+    if (n) n.zone = zone;
+  }
+
   setSourcePosition(id: string, pos: Vec3) {
     const n = this.sources.get(id);
     if (!n || !this.ctx) return;
@@ -126,6 +135,7 @@ class AudioEngine {
     fwd: THREE.Vector3,
     up: THREE.Vector3,
     localInBooth: boolean,
+    localZone: ZoneId,
   ) {
     if (!this.ctx) return;
     const ctx = this.ctx;
@@ -151,7 +161,12 @@ class AudioEngine {
       n.boothFilter.frequency.setTargetAtTime(isolated ? 600 : 22050, t, 0.08);
       n.boothFilter.Q.setTargetAtTime(isolated ? 1.2 : 0.7, t, 0.08);
       const vol = s.sourceVolumes[id] ?? 1;
-      n.sourceGain.gain.setTargetAtTime(isolated ? vol * 0.45 : vol, t, 0.08);
+      const zoneMuted = n.zone !== localZone ? 0 : 1;
+      n.sourceGain.gain.setTargetAtTime(
+        (isolated ? vol * 0.45 : vol) * zoneMuted,
+        t,
+        0.08,
+      );
 
       n.panner.maxDistance = s.maxDistance;
       n.panner.rolloffFactor = s.rolloffFactor;

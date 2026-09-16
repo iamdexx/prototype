@@ -1,324 +1,127 @@
-import { useEffect, useMemo, useRef } from 'react';
-import * as THREE from 'three';
-import { useFrame } from '@react-three/fiber';
+import type * as THREE from 'three';
 import { Text } from '@react-three/drei';
-import { ROOM, PARTITION } from './room';
-import {
-  acousticWallMaterial,
-  woodFloorMaterial,
-  concreteFloorMaterial,
-  woodSlatMaterial,
-} from './materials';
+import type { ZoneId } from './zones';
+import { ZONES, HALLWAY } from './zones';
+import { useWorldMaterials } from './materials';
+import type { Vec3 } from '../state/playerStore';
 
-const W = ROOM.width; // 52
-const H = ROOM.height; // 6
-const D = ROOM.depth; // 24
-const HALF_W = W / 2;
+type Seg = { pos: Vec3; size: Vec3 };
+const seg = (cx: number, cy: number, cz: number, w: number, h: number, d: number): Seg => ({
+  pos: [cx, cy, cz],
+  size: [w, h, d],
+});
 
-// Subdued LED palette: mid-saturation colors, dark grout between tiles.
-const TILE_COLORS = Array.from({ length: 5 }, (_, i) =>
-  new THREE.Color().setHSL(i / 5, 0.7, 0.45),
-);
-
-/** 10x8m emissive LED dance floor, one InstancedMesh, slow color cycling. */
-function DanceFloor({ center = [12, 0.01, 0] }: { center?: [number, number, number] }) {
-  const cols = 10;
-  const rows = 8;
-  const count = cols * rows;
-  const mesh = useRef<THREE.InstancedMesh>(null);
-  const acc = useRef(0);
-  const dummy = useMemo(() => new THREE.Object3D(), []);
-
-  useEffect(() => {
-    const m = mesh.current;
-    if (!m) return;
-    let i = 0;
-    for (let x = 0; x < cols; x++) {
-      for (let z = 0; z < rows; z++) {
-        dummy.position.set(x - cols / 2 + 0.5, 0, z - rows / 2 + 0.5);
-        dummy.updateMatrix();
-        m.setMatrixAt(i, dummy.matrix);
-        m.setColorAt(i, TILE_COLORS[(x + z) % TILE_COLORS.length]);
-        i++;
-      }
-    }
-    m.instanceMatrix.needsUpdate = true;
-    if (m.instanceColor) m.instanceColor.needsUpdate = true;
-  }, [dummy]);
-
-  useFrame((_, dt) => {
-    const m = mesh.current;
-    if (!m) return;
-    acc.current += dt;
-    if (acc.current < 1.8) return;
-    acc.current = 0;
-    const t = performance.now() / 1000;
-    let i = 0;
-    for (let x = 0; x < cols; x++) {
-      for (let z = 0; z < rows; z++) {
-        m.setColorAt(i, TILE_COLORS[(x + z + Math.floor(t)) % TILE_COLORS.length]);
-        i++;
-      }
-    }
-    if (m.instanceColor) m.instanceColor.needsUpdate = true;
-  });
-
+function WallSegs({ segs, material }: { segs: Seg[]; material: THREE.Material }) {
   return (
-    <instancedMesh
-      ref={mesh}
-      args={[undefined, undefined, count]}
-      position={center}
-    >
-      <boxGeometry args={[0.96, 0.02, 0.96]} />
-      {/* basic material + per-instance HDR-ish color so tiles glow/bloom */}
-      <meshBasicMaterial toneMapped={false} />
-    </instancedMesh>
-  );
-}
-
-/** Two horizontal emissive LED strips around the club walls (y=1, y=4). */
-function ClubWallStrips() {
-  const cLen = HALF_W; // club half-width
-  const stripMat = (color: string) => (
-    <meshStandardMaterial color={color} emissive={color} emissiveIntensity={2.2} />
-  );
-  return (
-    <group>
-      {[1, 4].map((y) => (
-        <group key={y}>
-          {/* back wall (-z) club half */}
-          <mesh position={[HALF_W / 2, y, -D / 2 + 0.03]}>
-            <boxGeometry args={[cLen, 0.08, 0.05]} />
-            {stripMat(y === 1 ? '#ff2d95' : '#00e5ff')}
-          </mesh>
-          {/* front wall (+z) club half */}
-          <mesh position={[HALF_W / 2, y, D / 2 - 0.03]}>
-            <boxGeometry args={[cLen, 0.08, 0.05]} />
-            {stripMat(y === 1 ? '#00e5ff' : '#ff2d95')}
-          </mesh>
-          {/* +x wall */}
-          <mesh position={[HALF_W - 0.03, y, 0]} rotation={[0, Math.PI / 2, 0]}>
-            <boxGeometry args={[D, 0.08, 0.05]} />
-            {stripMat(y === 1 ? '#ff2d95' : '#00e5ff')}
-          </mesh>
-        </group>
-      ))}
-    </group>
-  );
-}
-
-/** Partition at x=0 with a 5m doorway, glow frame and zone labels. */
-function Partition() {
-  const t = PARTITION.thickness;
-  const dh = PARTITION.doorHalf;
-  const sideLen = D / 2 - dh;
-  const sideCenter = dh + sideLen / 2;
-  const wallMat = useMemo(
-    () => new THREE.MeshStandardMaterial({ color: '#26262e', roughness: 0.85 }),
-    [],
-  );
-  const studioFace = useMemo(acousticWallMaterial, []);
-  const clubFace = useMemo(
-    () => new THREE.MeshStandardMaterial({ color: '#1a1a24', roughness: 0.9 }),
-    [],
-  );
-  return (
-    <group>
-      {/* wall segments either side of the doorway */}
-      <mesh position={[PARTITION.x, H / 2, -sideCenter]} material={wallMat}>
-        <boxGeometry args={[t, H, sideLen]} />
-      </mesh>
-      <mesh position={[PARTITION.x, H / 2, sideCenter]} material={wallMat}>
-        <boxGeometry args={[t, H, sideLen]} />
-      </mesh>
-      {/* lintel above the doorway */}
-      <mesh position={[PARTITION.x, (H + 3) / 2, 0]} material={wallMat}>
-        <boxGeometry args={[t, H - 3, dh * 2]} />
-      </mesh>
-      {/* zone-matched faces: acoustic on studio side, dark matte on club side */}
-      <mesh position={[PARTITION.x - t / 2 - 0.01, H / 2, -sideCenter]} rotation={[0, -Math.PI / 2, 0]} material={studioFace}>
-        <planeGeometry args={[sideLen, H]} />
-      </mesh>
-      <mesh position={[PARTITION.x - t / 2 - 0.01, H / 2, sideCenter]} rotation={[0, -Math.PI / 2, 0]} material={studioFace}>
-        <planeGeometry args={[sideLen, H]} />
-      </mesh>
-      <mesh position={[PARTITION.x + t / 2 + 0.01, H / 2, -sideCenter]} rotation={[0, Math.PI / 2, 0]} material={clubFace}>
-        <planeGeometry args={[sideLen, H]} />
-      </mesh>
-      <mesh position={[PARTITION.x + t / 2 + 0.01, H / 2, sideCenter]} rotation={[0, Math.PI / 2, 0]} material={clubFace}>
-        <planeGeometry args={[sideLen, H]} />
-      </mesh>
-      {/* doorway glow frame */}
-      <mesh position={[PARTITION.x, 3.02, 0]}>
-        <boxGeometry args={[t + 0.08, 0.06, dh * 2 + 0.1]} />
-        <meshStandardMaterial color="#00e5ff" emissive="#00e5ff" emissiveIntensity={2.5} />
-      </mesh>
-      {[-dh, dh].map((z) => (
-        <mesh key={z} position={[PARTITION.x, 1.5, z + (z < 0 ? -0.04 : 0.04)]}>
-          <boxGeometry args={[t + 0.08, 3, 0.06]} />
-          <meshStandardMaterial color="#ff2d95" emissive="#ff2d95" emissiveIntensity={2.5} />
+    <>
+      {segs.map((s, i) => (
+        <mesh key={i} position={s.pos} material={material}>
+          <boxGeometry args={s.size} />
         </mesh>
       ))}
-      {/* labels above the doorway — each names the room you're entering */}
-      <Text
-        position={[-t / 2 - 0.02, 3.5, 0]}
-        rotation={[0, -Math.PI / 2, 0]}
-        fontSize={0.4}
-        color="#00e5ff"
-        anchorX="center"
-      >
-        DJ CLUB
-      </Text>
-      <Text
-        position={[t / 2 + 0.02, 3.5, 0]}
-        rotation={[0, Math.PI / 2, 0]}
-        fontSize={0.4}
-        color="#ffd9a8"
-        anchorX="center"
-      >
-        RECORDING STUDIO
-      </Text>
-    </group>
+    </>
   );
 }
 
-const SPOT_COLORS = ['#ff2d95', '#00e5ff', '#7a4dff', '#ffb300', '#22ff88', '#ff5544'];
+/**
+ * Per-zone architectural shell: floor, walls (with hallway doorway + window
+ * openings), black ceiling, accent light cove, wall typography.
+ * Zones are centered on the world origin; only one renders at a time.
+ */
+export function Shell({ zone }: { zone: ZoneId }) {
+  const m = useWorldMaterials();
+  const def = ZONES[zone];
+  const hw = def.bounds.width / 2;
+  const hd = def.bounds.depth / 2;
+  const h = def.bounds.height;
+  const t = 0.3; // wall thickness
+  const doorHalf = HALLWAY.width / 2 + 0.15; // doorway opening half width
+  const doorH = HALLWAY.height + 0.3;
 
-/** Lighting truss with 6 color-cycling spotlights over the dance floor. */
-function Truss() {
-  const spots = useRef<(THREE.SpotLight | null)[]>([]);
-  const targets = useRef<(THREE.Object3D | null)[]>([]);
-  const hue = useRef(0);
+  const floorMat = zone === 'studio' ? m.woodFloor : m.concrete;
+  const wallMat = zone === 'studio' ? m.fabricWall : m.plaster;
 
-  useFrame((_, dt) => {
-    hue.current = (hue.current + dt * 0.05) % 1;
-    const col = new THREE.Color();
-    for (let i = 0; i < spots.current.length; i++) {
-      const s = spots.current[i];
-      if (!s) continue;
-      col.setHSL((hue.current + i / 6) % 1, 0.9, 0.55);
-      s.color.copy(col);
-    }
-  });
-
-  return (
-    <group position={[12, 0, 0]}>
-      {/* truss frame */}
-      <mesh position={[0, 5.4, 0]}>
-        <boxGeometry args={[11, 0.15, 0.15]} />
-        <meshStandardMaterial color="#2a2a30" metalness={0.6} roughness={0.4} />
-      </mesh>
-      <mesh position={[0, 5.4, -4]}>
-        <boxGeometry args={[11, 0.15, 0.15]} />
-        <meshStandardMaterial color="#2a2a30" metalness={0.6} roughness={0.4} />
-      </mesh>
-      {[-5.5, 5.5].map((x) => (
-        <mesh key={x} position={[x, 5.4, -2]} rotation={[Math.PI / 2, 0, 0]}>
-          <cylinderGeometry args={[0.06, 0.06, 4, 8]} />
-          <meshStandardMaterial color="#2a2a30" metalness={0.6} roughness={0.4} />
-        </mesh>
-      ))}
-      {Array.from({ length: 6 }, (_, i) => {
-        const x = -4.5 + i * 1.8;
-        const z = i % 2 === 0 ? 0 : -4;
-        return (
-          <group key={i}>
-            <spotLight
-              ref={(el) => {
-                spots.current[i] = el;
-              }}
-              position={[x, 5.3, z]}
-              angle={0.6}
-              penumbra={0.6}
-              intensity={200}
-              distance={20}
-              color={SPOT_COLORS[i]}
-            />
-            <object3D
-              ref={(el) => {
-                targets.current[i] = el;
-                if (el && spots.current[i]) spots.current[i]!.target = el;
-              }}
-              position={[x * 0.6, 0, z * 0.6]}
-            />
-          </group>
-        );
-      })}
-    </group>
-  );
-}
-
-export function Shell() {
-  const acoustic = useMemo(acousticWallMaterial, []);
-  const woodFloor = useMemo(woodFloorMaterial, []);
-  const concrete = useMemo(concreteFloorMaterial, []);
-  const slat = useMemo(woodSlatMaterial, []);
-  const darkWall = useMemo(
-    () => new THREE.MeshStandardMaterial({ color: '#1a1a24', roughness: 0.9 }),
-    [],
-  );
-  const ceilingMat = useMemo(
-    () => new THREE.MeshStandardMaterial({ color: '#101014', roughness: 1 }),
-    [],
-  );
-
-  const studioWallSegments: { pos: [number, number, number]; rotY: number; size: [number, number] }[] = [
-    { pos: [-HALF_W / 2, H / 2, -D / 2], rotY: 0, size: [HALF_W, H] }, // -z studio half
-    { pos: [-HALF_W / 2, H / 2, D / 2], rotY: Math.PI, size: [HALF_W, H] }, // +z studio half
-    { pos: [-HALF_W, H / 2, 0], rotY: Math.PI / 2, size: [D, H] }, // -x wall
-  ];
-  const clubWallSegments: { pos: [number, number, number]; rotY: number; size: [number, number] }[] = [
-    { pos: [HALF_W / 2, H / 2, -D / 2], rotY: 0, size: [HALF_W, H] },
-    { pos: [HALF_W / 2, H / 2, D / 2], rotY: Math.PI, size: [HALF_W, H] },
-    { pos: [HALF_W, H / 2, 0], rotY: -Math.PI / 2, size: [D, H] },
+  // Wall segments ---------------------------------------------------------
+  // +x wall (studio) / -x wall (club) gets the hallway doorway.
+  const hallSide = zone === 'studio' ? 1 : -1;
+  const hallX = hallSide * (hw + t / 2);
+  const doorWall: Seg[] = [
+    // segment z in [-hd, -doorHalf]
+    seg(hallX, h / 2, -(hd + doorHalf) / 2, t, h, hd - doorHalf),
+    // segment z in [doorHalf, hd]
+    seg(hallX, h / 2, (hd + doorHalf) / 2, t, h, hd - doorHalf),
+    // lintel above doorway
+    seg(hallX, (doorH + h) / 2, 0, t, h - doorH, doorHalf * 2),
   ];
 
+  const farX = -hallSide * (hw + t / 2);
+  const farWall: Seg[] = [seg(farX, h / 2, 0, t, h, hd * 2)];
+
+  let backWall: Seg[]; // -z
+  let frontWall: Seg[]; // +z
+  if (zone === 'studio') {
+    // -z: glass wall into the live room (opening x -8..8, y 0.8..4.2)
+    backWall = [
+      seg(-10, h / 2, -(hd + t / 2), 4, h, t),
+      seg(10, h / 2, -(hd + t / 2), 4, h, t),
+      seg(0, 0.4, -(hd + t / 2), 16, 0.8, t),
+      seg(0, 5.1, -(hd + t / 2), 16, h - 4.2, t),
+    ];
+    // +z: window to the ocean (opening x -6..6, y 1.1..4.6)
+    frontWall = [
+      seg(-9, h / 2, hd + t / 2, 6, h, t),
+      seg(9, h / 2, hd + t / 2, 6, h, t),
+      seg(0, 0.55, hd + t / 2, 12, 1.1, t),
+      seg(0, 5.3, hd + t / 2, 12, h - 4.6, t),
+    ];
+  } else {
+    // -z: wide opening behind the stage framing night sky (x -5..5, y 0.4..5.6)
+    backWall = [
+      seg(-9, h / 2, -(hd + t / 2), 8, h, t),
+      seg(9, h / 2, -(hd + t / 2), 8, h, t),
+      seg(0, 0.2, -(hd + t / 2), 10, 0.4, t),
+      seg(0, 6.3, -(hd + t / 2), 10, h - 5.6, t),
+    ];
+    frontWall = [seg(0, h / 2, hd + t / 2, hw * 2 + t * 2, h, t)];
+  }
+
   return (
     <group>
-      {/* floors */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-HALF_W / 2, 0, 0]} material={woodFloor} receiveShadow>
-        <planeGeometry args={[HALF_W, D]} />
+      {/* floor + ceiling */}
+      <mesh rotation-x={-Math.PI / 2} position={[0, 0, 0]} material={floorMat}>
+        <planeGeometry args={[hw * 2, hd * 2]} />
       </mesh>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[HALF_W / 2, 0, 0]} material={concrete} receiveShadow>
-        <planeGeometry args={[HALF_W, D]} />
-      </mesh>
-      <DanceFloor />
-
-      {/* ceiling */}
-      <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, H, 0]} material={ceilingMat}>
-        <planeGeometry args={[W, D]} />
+      <mesh rotation-x={Math.PI / 2} position={[0, h, 0]} material={m.ceiling}>
+        <planeGeometry args={[hw * 2 + t * 2, hd * 2 + t * 2]} />
       </mesh>
 
-      {/* studio walls: acoustic foam + wood slat band at y~1.4 */}
-      {studioWallSegments.map((w, i) => (
-        <group key={i}>
-          <mesh position={w.pos} rotation={[0, w.rotY, 0]} material={acoustic}>
-            <planeGeometry args={w.size} />
-          </mesh>
-          {/* slat accent band, inset slightly into the room */}
-          <mesh
-            position={[
-              w.pos[0] + (w.rotY === Math.PI / 2 ? 0.02 : 0),
-              1.4,
-              w.pos[2] + (w.rotY === 0 ? 0.02 : w.rotY === Math.PI ? -0.02 : 0),
-            ]}
-            rotation={[0, w.rotY, 0]}
-            material={slat}
-          >
-            <planeGeometry args={[w.size[0], 0.9]} />
-          </mesh>
-        </group>
-      ))}
+      <WallSegs segs={backWall} material={wallMat} />
+      <WallSegs segs={frontWall} material={wallMat} />
+      <WallSegs segs={doorWall} material={wallMat} />
+      <WallSegs segs={farWall} material={wallMat} />
 
-      {/* club walls: dark matte + LED strips */}
-      {clubWallSegments.map((w, i) => (
-        <mesh key={i} position={w.pos} rotation={[0, w.rotY, 0]} material={darkWall}>
-          <planeGeometry args={w.size} />
-        </mesh>
-      ))}
-      <ClubWallStrips />
-      <Partition />
-      <Truss />
+      {/* accent light cove along the ceiling */}
+      <mesh position={[0, h - 0.06, 0]}>
+        <boxGeometry args={[hw * 1.5, 0.08, 0.3]} />
+        <meshStandardMaterial color={def.accent} emissive={def.accent} emissiveIntensity={3} />
+      </mesh>
+
+      {/* door frame glow */}
+      <mesh position={[hallSide * hw, doorH / 2, 0]}>
+        <boxGeometry args={[0.06, doorH, doorHalf * 2 + 0.15]} />
+        <meshStandardMaterial color={def.accent} emissive={def.accent} emissiveIntensity={1.6} />
+      </mesh>
+
+      {/* wall typography */}
+      {zone === 'studio' ? (
+        <Text position={[0, 5.15, hd - 0.05]} rotation-y={Math.PI} fontSize={0.8} color="#f0f0f2" anchorX="center" letterSpacing={0.08}>
+          APE STUDIO
+        </Text>
+      ) : (
+        <Text position={[hw - 0.1, 4.4, 0]} rotation-y={-Math.PI / 2} fontSize={0.8} color="#cfd8ff" anchorX="center" letterSpacing={0.08}>
+          APE CLUB
+        </Text>
+      )}
     </group>
   );
 }

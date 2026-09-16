@@ -1,100 +1,77 @@
+import { useMemo } from 'react';
 import * as THREE from 'three';
+import { useTexture } from '@react-three/drei';
 
-function makeCanvas(w: number, h: number) {
-  const canvas = document.createElement('canvas');
-  canvas.width = w;
-  canvas.height = h;
-  return { canvas, ctx: canvas.getContext('2d') };
+const base = '/textures';
+const PATHS = {
+  woodD: `${base}/wood_floor_deck/diffuse.jpg`,
+  woodN: `${base}/wood_floor_deck/normal.jpg`,
+  woodR: `${base}/wood_floor_deck/rough.jpg`,
+  conD: `${base}/concrete_floor_02/diffuse.jpg`,
+  conN: `${base}/concrete_floor_02/normal.jpg`,
+  conR: `${base}/concrete_floor_02/rough.jpg`,
+  fabD: `${base}/fabric_pattern_07/diffuse.jpg`,
+  fabN: `${base}/fabric_pattern_07/normal.jpg`,
+  fabR: `${base}/fabric_pattern_07/rough.jpg`,
+  plaD: `${base}/plastered_wall_04/diffuse.jpg`,
+  plaN: `${base}/plastered_wall_04/normal.jpg`,
+  plaR: `${base}/plastered_wall_04/rough.jpg`,
+  metD: `${base}/metal_plate/diffuse.jpg`,
+  metN: `${base}/metal_plate/normal.jpg`,
+  metR: `${base}/metal_plate/rough.jpg`,
+  leaD: `${base}/fabric_leather_01/diffuse.jpg`,
+  leaN: `${base}/fabric_leather_01/normal.jpg`,
+  leaR: `${base}/fabric_leather_01/rough.jpg`,
+};
+
+export type TexKey = keyof typeof PATHS;
+
+function prep(t: THREE.Texture | undefined, rx: number, ry: number, srgb: boolean) {
+  if (!t) return null;
+  const c = t.clone();
+  c.wrapS = c.wrapT = THREE.RepeatWrapping;
+  c.repeat.set(rx, ry);
+  if (srgb) c.colorSpace = THREE.SRGBColorSpace;
+  c.needsUpdate = true;
+  return c;
 }
 
-/** Acoustic foam wedge tiles (studio walls). */
-export function acousticWallMaterial(): THREE.MeshStandardMaterial {
-  const { canvas, ctx } = makeCanvas(256, 256);
-  if (ctx) {
-    for (let y = 0; y < 8; y++) {
-      for (let x = 0; x < 8; x++) {
-        const shade = 30 + ((x + y) % 2) * 22;
-        ctx.fillStyle = `rgb(${shade},${shade},${shade + 6})`;
-        ctx.fillRect(x * 32, y * 32, 32, 32);
-        ctx.fillStyle = 'rgba(255,255,255,0.04)';
-        ctx.fillRect(x * 32, y * 32, 32, 4);
-      }
-    }
-  }
-  const tex = new THREE.CanvasTexture(canvas);
-  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-  tex.repeat.set(8, 2);
-  return new THREE.MeshStandardMaterial({ map: tex, roughness: 0.95 });
+export interface WorldMaterials {
+  woodFloor: THREE.MeshStandardMaterial;
+  fabricWall: THREE.MeshStandardMaterial;
+  concrete: THREE.MeshStandardMaterial;
+  plaster: THREE.MeshStandardMaterial;
+  metal: THREE.MeshStandardMaterial;
+  chrome: THREE.MeshStandardMaterial;
+  leather: THREE.MeshStandardMaterial;
+  black: THREE.MeshStandardMaterial;
+  ceiling: THREE.MeshStandardMaterial;
 }
 
-/** Warm wood planks (studio floor). */
-export function woodFloorMaterial(): THREE.MeshStandardMaterial {
-  const { canvas, ctx } = makeCanvas(512, 512);
-  if (ctx) {
-    for (let i = 0; i < 16; i++) {
-      const t = i / 15;
-      const r = Math.round(107 + t * 31 + (i % 3) * 6); // #6b4a2e -> #8a6340
-      const g = Math.round(74 + t * 25 + (i % 2) * 5);
-      const b = Math.round(46 + t * 18);
-      ctx.fillStyle = `rgb(${r},${g},${b})`;
-      ctx.fillRect(0, i * 32, 512, 32);
-      // grain lines
-      ctx.fillStyle = 'rgba(0,0,0,0.10)';
-      for (let gline = 0; gline < 4; gline++) {
-        const gy = i * 32 + 6 + gline * 7 + (i % 4);
-        ctx.fillRect(0, gy, 512, 1);
-      }
-      ctx.fillRect(0, i * 32 + 31, 512, 2);
-      // plank seams (staggered)
-      const seam = ((i * 137) % 256) + 40;
-      ctx.fillRect(seam, i * 32, 2, 32);
-    }
-  }
-  const tex = new THREE.CanvasTexture(canvas);
-  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-  tex.repeat.set(6, 6);
-  tex.colorSpace = THREE.SRGBColorSpace;
-  return new THREE.MeshStandardMaterial({ map: tex, roughness: 0.6 });
-}
-
-/** Dark polished concrete (club floor). */
-export function concreteFloorMaterial(): THREE.MeshStandardMaterial {
-  const { canvas, ctx } = makeCanvas(256, 256);
-  if (ctx) {
-    ctx.fillStyle = '#1c1c24';
-    ctx.fillRect(0, 0, 256, 256);
-    for (let i = 0; i < 400; i++) {
-      const v = 18 + Math.random() * 14;
-      ctx.fillStyle = `rgba(${v},${v},${v + 6},0.5)`;
-      ctx.fillRect(Math.random() * 256, Math.random() * 256, 2, 2);
-    }
-  }
-  const tex = new THREE.CanvasTexture(canvas);
-  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-  tex.repeat.set(10, 10);
-  return new THREE.MeshStandardMaterial({
-    map: tex,
-    color: '#1c1c24',
-    roughness: 0.3,
-    metalness: 0.2,
-  });
-}
-
-/** Vertical wood slat accent band for studio walls. */
-export function woodSlatMaterial(): THREE.MeshStandardMaterial {
-  const { canvas, ctx } = makeCanvas(256, 64);
-  if (ctx) {
-    for (let x = 0; x < 32; x++) {
-      const shade = 90 + (x % 3) * 14;
-      ctx.fillStyle = `rgb(${shade},${Math.round(shade * 0.7)},${Math.round(shade * 0.42)})`;
-      ctx.fillRect(x * 8, 0, 7, 64);
-      ctx.fillStyle = '#151009';
-      ctx.fillRect(x * 8 + 7, 0, 1, 64);
-    }
-  }
-  const tex = new THREE.CanvasTexture(canvas);
-  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-  tex.repeat.set(16, 1);
-  tex.colorSpace = THREE.SRGBColorSpace;
-  return new THREE.MeshStandardMaterial({ map: tex, roughness: 0.7 });
+/**
+ * All world materials from Poly Haven CC0 textures (see public/textures).
+ * Memoized per component instance; textures are shared via drei cache.
+ */
+export function useWorldMaterials(): WorldMaterials {
+  const t = useTexture(PATHS);
+  return useMemo(() => {
+    const pbr = (d: THREE.Texture | undefined, n: THREE.Texture | undefined, r: THREE.Texture | undefined, rx: number, ry: number, opts: Partial<THREE.MeshStandardMaterialParameters> = {}) =>
+      new THREE.MeshStandardMaterial({
+        map: prep(d, rx, ry, true) ?? undefined,
+        normalMap: prep(n, rx, ry, false) ?? undefined,
+        roughnessMap: prep(r, rx, ry, false) ?? undefined,
+        ...opts,
+      });
+    return {
+      woodFloor: pbr(t.woodD, t.woodN, t.woodR, 6, 6, { color: '#8a7a68', roughness: 0.7 }),
+      fabricWall: pbr(t.fabD, t.fabN, t.fabR, 6, 2, { color: '#3a3c44', roughness: 0.95 }),
+      concrete: pbr(t.conD, t.conN, t.conR, 7, 7, { color: '#565662', roughness: 0.25, metalness: 0.3 }),
+      plaster: pbr(t.plaD, t.plaN, t.plaR, 5, 2, { color: '#3f3f48', roughness: 0.85 }),
+      metal: pbr(t.metD, t.metN, t.metR, 2, 2, { color: '#b8bcc4', metalness: 0.8, roughness: 0.4 }),
+      chrome: new THREE.MeshStandardMaterial({ color: '#d8dce2', metalness: 1, roughness: 0.15 }),
+      leather: pbr(t.leaD, t.leaN, t.leaR, 2, 2, { color: '#1c1c20', roughness: 0.7 }),
+      black: new THREE.MeshStandardMaterial({ color: '#0b0b0e', roughness: 0.9 }),
+      ceiling: new THREE.MeshStandardMaterial({ color: '#060608', roughness: 1 }),
+    };
+  }, [t]);
 }

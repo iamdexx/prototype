@@ -3,6 +3,7 @@ import { useThree, type ThreeEvent } from '@react-three/fiber';
 import * as THREE from 'three';
 import { Text } from '@react-three/drei';
 import { usePeersStore } from '../net/peersStore';
+import { useWorldStore } from '../state/worldStore';
 import { useShareStore } from './shareStore';
 import type { PeerMesh } from '../net/mesh';
 import type { PanelTransform } from '../net/protocol';
@@ -120,11 +121,14 @@ function Panel({ panel, getMesh }: { panel: PanelTransform; getMesh: () => PeerM
 
 export function SharePanels({ getMesh }: { getMesh: () => PeerMesh | null }) {
   const panels = usePeersStore((s) => s.panels);
+  const zone = useWorldStore((s) => s.zone);
   return (
     <>
-      {Object.values(panels).map((p) => (
-        <Panel key={p.id} panel={p} getMesh={getMesh} />
-      ))}
+      {Object.values(panels).map((p) =>
+        (p.zone ?? 'studio') === zone ? (
+          <Panel key={p.id} panel={p} getMesh={getMesh} />
+        ) : null,
+      )}
     </>
   );
 }

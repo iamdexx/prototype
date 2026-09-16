@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import type { PeerMesh } from '../net/mesh';
 import { useShareStore } from './shareStore';
 import { usePeersStore } from '../net/peersStore';
+import { useWorldStore } from '../state/worldStore';
 import type { PanelTransform } from '../net/protocol';
 
 let panelSeq = 0;
@@ -24,6 +25,7 @@ export function useScreenShare(getMesh: () => PeerMesh | null) {
         kind,
         src,
         owner: self,
+        zone: useWorldStore.getState().zone,
       };
       usePeersStore.getState().setPanel(panel);
       getMesh()?.broadcastPanel(panel, panel.id);

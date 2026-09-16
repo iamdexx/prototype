@@ -23,14 +23,20 @@ import { useMic } from './audio/useMic';
 import { useScreenShare } from './share/useScreenShare';
 import { useShareStore } from './share/shareStore';
 import { useQuality } from './state/quality';
+import { useWorldStore } from './state/worldStore';
 import { DJ_BOARD_POSITION } from './world/layout';
+import { ZONES } from './world/zones';
+import { Fade } from './ui/Fade';
 
 const isTouchDevice =
   typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
 
 // Dev-only QA hooks: window.__player (zustand store) + window.__r3f (RootState).
 const devWindow = window as unknown as Record<string, unknown>;
-if (import.meta.env.DEV) devWindow.__player = usePlayerStore;
+if (import.meta.env.DEV) {
+  devWindow.__player = usePlayerStore;
+  devWindow.__world = useWorldStore;
+}
 
 function buildStateMessage(): PeerStateMessage {
   const s = usePlayerStore.getState();
@@ -45,6 +51,7 @@ function buildStateMessage(): PeerStateMessage {
     mouthOpen: s.mouthOpen,
     name: s.displayName,
     wallet: walletInfo.short,
+    zone: useWorldStore.getState().zone,
   };
 }
 
@@ -79,6 +86,7 @@ export default function App() {
   const mic = useMic();
   const share = useScreenShare(() => meshRef.current);
   const sharing = useShareStore((s) => s.sharing);
+  const zone = useWorldStore((s) => s.zone);
 
   useEffect(() => {
     const mesh = new PeerMesh(roomFromUrl(), buildStateMessage);
@@ -106,7 +114,12 @@ export default function App() {
       <Canvas
         shadows
         gl={{ antialias: true, powerPreference: 'high-performance' }}
-        camera={{ position: [-12, 1.6, 9], fov: 70, near: 0.05, far: 100 }}
+        camera={{
+          position: [ZONES[useWorldStore.getState().zone].spawn[0], 1.6, ZONES[useWorldStore.getState().zone].spawn[2]],
+          fov: 70,
+          near: 0.05,
+          far: 6000,
+        }}
         style={{ flex: 1 }}
         onCreated={(state: RootState) => {
           if (import.meta.env.DEV) devWindow.__r3f = state;
@@ -114,9 +127,9 @@ export default function App() {
       >
         <XR store={xrStore}>
           <color attach="background" args={['#0b0b10']} />
-          <fog attach="fog" args={['#0b0b10', 20, 45]} />
+          <fog attach="fog" args={['#0b0b10', 30, 200]} />
           <Studio />
-          <DJBoard position={DJ_BOARD_POSITION} />
+          {zone === 'club' && <DJBoard position={DJ_BOARD_POSITION} />}
           <RemoteAvatars />
           <SharePanels getMesh={() => meshRef.current} />
           <DesktopControls xrStore={xrStore} />
@@ -128,6 +141,7 @@ export default function App() {
         </XR>
       </Canvas>
       {isTouchDevice && <TouchControls />}
+      <Fade />
       <NamePrompt />
       <HUD
         xrStore={xrStore}

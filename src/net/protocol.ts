@@ -1,4 +1,5 @@
 import type { Vec3 } from '../state/playerStore';
+import type { ZoneId } from '../world/zones';
 
 /** Deterministic host peer id for a room. */
 export const hostIdForRoom = (room: string) => `ape-studio-${room}-host`;
@@ -20,6 +21,8 @@ export interface PeerStateMessage {
   mouthOpen: number;
   name: string;
   wallet: string;
+  /** Which environment the peer is in; older clients may omit it. */
+  zone?: ZoneId;
 }
 
 export interface PeerListMessage {
@@ -38,6 +41,7 @@ export interface PanelTransform {
   /** URL for image/url panels. */
   src: string;
   owner: string;
+  zone: ZoneId;
 }
 
 export interface PanelMessage {

@@ -1,4 +1,6 @@
 import { create } from 'zustand';
+import { ZONES } from '../world/zones';
+import { useWorldStore } from './worldStore';
 
 export type Vec3 = [number, number, number];
 
@@ -27,10 +29,12 @@ export interface PlayerState {
 const savedName =
   typeof localStorage !== 'undefined' ? localStorage.getItem('ape-studio-name') ?? '' : '';
 
+const initialZone = ZONES[useWorldStore.getState().zone];
+
 export const usePlayerStore = create<PlayerState>((set) => ({
-  position: [-12, 0, 9],
-  yaw: 0, // camera identity = looking -z, toward the mixing desk
-  headPosition: [-12, 1.6, 9],
+  position: initialZone.spawn,
+  yaw: initialZone.spawnYaw,
+  headPosition: [initialZone.spawn[0], 1.6, initialZone.spawn[2]],
   headQuaternion: [0, 0, 0, 1],
   mouthOpen: 0,
   displayName: savedName,
