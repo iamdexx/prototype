@@ -116,6 +116,7 @@ export default function App() {
         gl={{ antialias: true, powerPreference: 'high-performance' }}
         camera={{
           position: [ZONES[useWorldStore.getState().zone].spawn[0], 1.6, ZONES[useWorldStore.getState().zone].spawn[2]],
+          rotation: [0, ZONES[useWorldStore.getState().zone].spawnYaw, 0],
           fov: 70,
           near: 0.05,
           far: 6000,

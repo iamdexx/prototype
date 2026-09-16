@@ -55,12 +55,13 @@ export function SpatialAudioSync() {
         audioEngine.setSourceZone(`${p.id}:screen`, pz);
       }
     }
-    // Screenshare panels are spatial sources at the panel location.
-    for (const [pid, panel] of Object.entries(usePeersStore.getState().panels)) {
-      if (audioEngine.hasSource(`${panel.owner}:screen`)) {
-        audioEngine.setSourcePosition(`${panel.owner}:screen`, panel.position);
+    // Screenshare audio lives where its panel is, not where its owner walked to.
+    for (const panel of Object.values(usePeersStore.getState().panels)) {
+      const key = `${panel.owner}:screen`;
+      if (audioEngine.hasSource(key)) {
+        audioEngine.setSourcePosition(key, panel.position);
+        audioEngine.setSourceZone(key, panel.zone ?? 'studio');
       }
-      void pid;
     }
     audioEngine.update(localPos, fwd, up, localInBooth, localZone);
   });
