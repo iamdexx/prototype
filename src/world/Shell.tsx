@@ -107,8 +107,14 @@ export function Shell({ zone }: { zone: ZoneId }) {
       </mesh>
 
       {/* door frame glow */}
-      <mesh position={[hallSide * hw, doorH / 2, 0]}>
-        <boxGeometry args={[0.06, doorH, doorHalf * 2 + 0.15]} />
+      {[-1, 1].map((s) => (
+        <mesh key={s} position={[hallSide * hw, doorH / 2, s * (doorHalf + 0.04)]}>
+          <boxGeometry args={[0.06, doorH, 0.08]} />
+          <meshStandardMaterial color={def.accent} emissive={def.accent} emissiveIntensity={1.6} />
+        </mesh>
+      ))}
+      <mesh position={[hallSide * hw, doorH + 0.04, 0]}>
+        <boxGeometry args={[0.06, 0.08, doorHalf * 2 + 0.15]} />
         <meshStandardMaterial color={def.accent} emissive={def.accent} emissiveIntensity={1.6} />
       </mesh>
 
