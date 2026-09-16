@@ -63,6 +63,9 @@ export default function App() {
 
   useEffect(() => {
     const mesh = new PeerMesh(roomFromUrl(), buildStateMessage);
+    // Always negotiate with the (initially silent) outgoing mix so an audio
+    // sender exists before the mic or DJ is enabled.
+    mesh.setOutgoingMedia(audioEngine.outgoingStream);
     meshRef.current = mesh;
     mesh.start();
     return () => {
@@ -74,11 +77,8 @@ export default function App() {
   const toggleMic = () => {
     if (mic.enabled) {
       mic.disable();
-      meshRef.current?.setOutgoingMedia(null);
     } else {
-      void mic.enable().then(() => {
-        meshRef.current?.setOutgoingMedia(audioEngine.outgoingStream);
-      });
+      void mic.enable();
     }
   };
 

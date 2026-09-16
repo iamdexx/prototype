@@ -77,5 +77,5 @@ export function DesktopControls({ xrStore }: { xrStore: XRStore }) {
     );
   });
 
-  return <PointerLockControls args={[camera, gl.domElement]} makeDefault />;
+  return <PointerLockControls args={[camera, gl.domElement]} selector="canvas" makeDefault />;
 }

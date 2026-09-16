@@ -8,27 +8,38 @@ import { audioEngine } from '../audio/engine';
 const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
 
 /** Rotary knob: drag vertically (or VR ray) to change value 0..1. */
-function Knob({ position, value, onChange, label, color = '#9db4ff' }: {
+function Knob({ position, value: initial, onChange, label, color = '#9db4ff' }: {
   position: [number, number, number];
   value: number;
   onChange: (v: number) => void;
   label: string;
   color?: string;
 }) {
+  const [value, setValue] = useState(initial);
   const drag = useRef<{ y: number; v: number } | null>(null);
+  const apply = (v: number) => {
+    const c = clamp01(v);
+    setValue(c);
+    onChange(c);
+  };
   return (
     <group position={position}>
       <mesh
         onPointerDown={(e) => {
           e.stopPropagation();
-          drag.current = { y: e.clientY ?? 0, v: value };
+          drag.current = { y: e.clientY, v: value };
           (e.target as Element)?.setPointerCapture?.(e.pointerId);
         }}
         onPointerMove={(e) => {
           if (!drag.current) return;
           e.stopPropagation();
-          const dv = (drag.current.y - (e.clientY ?? drag.current.y)) / 150;
-          onChange(clamp01(drag.current.v + dv));
+          // Under pointer lock clientY is frozen, so fall back to movementY.
+          if (document.pointerLockElement) {
+            drag.current.v -= e.movementY / 150;
+            apply(drag.current.v);
+          } else {
+            apply(drag.current.v + (drag.current.y - e.clientY) / 150);
+          }
         }}
         onPointerUp={() => (drag.current = null)}
       >
