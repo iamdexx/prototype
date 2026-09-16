@@ -106,7 +106,7 @@ export default function App() {
       <Canvas
         shadows
         gl={{ antialias: true, powerPreference: 'high-performance' }}
-        camera={{ position: [-10, 1.6, 8], fov: 70, near: 0.05, far: 100 }}
+        camera={{ position: [-12, 1.6, 9], fov: 70, near: 0.05, far: 100 }}
         style={{ flex: 1 }}
         onCreated={(state: RootState) => {
           if (import.meta.env.DEV) devWindow.__r3f = state;

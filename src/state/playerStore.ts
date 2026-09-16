@@ -28,9 +28,9 @@ const savedName =
   typeof localStorage !== 'undefined' ? localStorage.getItem('ape-studio-name') ?? '' : '';
 
 export const usePlayerStore = create<PlayerState>((set) => ({
-  position: [-10, 0, 8],
-  yaw: Math.PI,
-  headPosition: [-10, 1.6, 8],
+  position: [-12, 0, 9],
+  yaw: 0, // camera identity = looking -z, toward the mixing desk
+  headPosition: [-12, 1.6, 9],
   headQuaternion: [0, 0, 0, 1],
   mouthOpen: 0,
   displayName: savedName,

@@ -160,10 +160,10 @@ function LiveRoomWindow() {
   );
 }
 
-function Couch({ position }: { position: [number, number, number] }) {
+function Couch({ position, rotation = -0.5 }: { position: [number, number, number]; rotation?: number }) {
   const mat = <meshStandardMaterial color="#3a2f4a" roughness={0.85} />;
   return (
-    <group position={position} rotation={[0, -0.5, 0]}>
+    <group position={position} rotation={[0, rotation, 0]}>
       {[-0.7, 0, 0.7].map((x) => (
         <mesh key={x} position={[x, 0.25, 0]}>
           <boxGeometry args={[0.68, 0.3, 0.8]} />
@@ -410,12 +410,12 @@ export function RecordingStudio() {
       <VocalBooth />
       <LiveRoomWindow />
 
-      {/* lounge area */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-9, 0.02, 5]} material={rug}>
+      {/* lounge area near the partition, couch faces the desk (-x) */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-5, 0.02, 5]} material={rug}>
         <planeGeometry args={[4.5, 3]} />
       </mesh>
-      <Couch position={[-9, 0, 6.5]} />
-      <CoffeeTable position={[-9, 0, 4.6]} />
+      <Couch position={[-4, 0, 5]} rotation={-Math.PI / 2} />
+      <CoffeeTable position={[-5.6, 0, 5]} />
       <Plant position={[-14.5, 0, 5.5]} />
       <Plant position={[-4, 0, 10.5]} />
 
@@ -441,6 +441,8 @@ export function RecordingStudio() {
       <pointLight position={[-18, 5, -5]} intensity={12} distance={14} color="#ffd9a8" />
       <pointLight position={[-10, 5, 2]} intensity={12} distance={14} color="#ffd9a8" />
       <pointLight position={[-6, 5, 8]} intensity={10} distance={14} color="#ffcf98" />
+      <pointLight position={[-20, 5, 2]} intensity={40} distance={18} color="#ffd9a8" />
+      <pointLight position={[-8, 5, -6]} intensity={40} distance={18} color="#ffd9a8" />
       <directionalLight
         position={[-8, 5.5, 6]}
         intensity={0.5}

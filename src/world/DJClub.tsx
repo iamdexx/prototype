@@ -17,12 +17,12 @@ function Stage() {
       {/* edge glow strip along the front + sides */}
       <mesh position={[0, h + 0.02, d / 2 - 0.02]}>
         <boxGeometry args={[w, 0.05, 0.05]} />
-        <meshStandardMaterial color="#ff2d95" emissive="#ff2d95" emissiveIntensity={2.5} />
+        <meshStandardMaterial color="#ff2d95" emissive="#ff2d95" emissiveIntensity={2} />
       </mesh>
       {[-w / 2 + 0.02, w / 2 - 0.02].map((x) => (
         <mesh key={x} position={[x, h + 0.02, 0]}>
           <boxGeometry args={[0.05, 0.05, d]} />
-          <meshStandardMaterial color="#00e5ff" emissive="#00e5ff" emissiveIntensity={2.5} />
+          <meshStandardMaterial color="#00e5ff" emissive="#00e5ff" emissiveIntensity={2} />
         </mesh>
       ))}
       <pointLight position={[0, 3, 0]} intensity={12} distance={12} color="#9d7bff" />
@@ -123,6 +123,8 @@ function Bar({ position = [23.5, 0, 4] }: { position?: [number, number, number] 
         <boxGeometry args={[6.2, 0.05, 0.85]} />
         <meshStandardMaterial color="#332a44" roughness={0.2} metalness={0.3} />
       </mesh>
+      {/* under-shelf accent light so the counter/stools read */}
+      <pointLight position={[0, 1.7, -0.8]} intensity={30} distance={8} color="#ff2d95" />
       {/* back-bar shelves + bottles (against the wall behind the counter) */}
       {[2.0, 2.7].map((y) => (
         <mesh key={y} position={[0, y, -1.6]}>
@@ -209,9 +211,13 @@ export function DJClub() {
       <NeonSign />
 
       {/* cool club lighting */}
-      <ambientLight intensity={0.1} />
-      <pointLight position={[8, 4, 6]} intensity={10} distance={16} color="#6633ff" />
-      <pointLight position={[20, 4, -4]} intensity={10} distance={16} color="#2233ff" />
+      <ambientLight intensity={0.3} />
+      <hemisphereLight args={['#4433aa', '#110a1a', 0.6]} />
+      <pointLight position={[8, 4, 6]} intensity={70} distance={20} color="#6633ff" />
+      <pointLight position={[20, 4, -4]} intensity={70} distance={20} color="#2233ff" />
+      <pointLight position={[12, 4, 4]} intensity={60} distance={20} color="#4422cc" />
+      {/* warm wash over the DJ stage so the board + knobs read */}
+      <pointLight position={[14, 4.5, -7]} intensity={50} distance={18} color="#ffe0c0" />
     </group>
   );
 }

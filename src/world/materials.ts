@@ -61,7 +61,7 @@ export function woodFloorMaterial(): THREE.MeshStandardMaterial {
 export function concreteFloorMaterial(): THREE.MeshStandardMaterial {
   const { canvas, ctx } = makeCanvas(256, 256);
   if (ctx) {
-    ctx.fillStyle = '#14141a';
+    ctx.fillStyle = '#1c1c24';
     ctx.fillRect(0, 0, 256, 256);
     for (let i = 0; i < 400; i++) {
       const v = 18 + Math.random() * 14;
@@ -74,7 +74,7 @@ export function concreteFloorMaterial(): THREE.MeshStandardMaterial {
   tex.repeat.set(10, 10);
   return new THREE.MeshStandardMaterial({
     map: tex,
-    color: '#14141a',
+    color: '#1c1c24',
     roughness: 0.3,
     metalness: 0.2,
   });

@@ -15,8 +15,9 @@ const H = ROOM.height; // 6
 const D = ROOM.depth; // 24
 const HALF_W = W / 2;
 
-const TILE_COLORS = ['#ff2d95', '#00e5ff', '#7a4dff', '#ffb300', '#22ff88'].map(
-  (c) => new THREE.Color(c).multiplyScalar(1.4),
+// Subdued LED palette: mid-saturation colors, dark grout between tiles.
+const TILE_COLORS = Array.from({ length: 5 }, (_, i) =>
+  new THREE.Color().setHSL(i / 5, 0.7, 0.45),
 );
 
 /** 10x8m emissive LED dance floor, one InstancedMesh, slow color cycling. */
@@ -49,7 +50,7 @@ function DanceFloor({ center = [12, 0.01, 0] }: { center?: [number, number, numb
     const m = mesh.current;
     if (!m) return;
     acc.current += dt;
-    if (acc.current < 0.6) return;
+    if (acc.current < 1.8) return;
     acc.current = 0;
     const t = performance.now() / 1000;
     let i = 0;
@@ -116,6 +117,11 @@ function Partition() {
     () => new THREE.MeshStandardMaterial({ color: '#26262e', roughness: 0.85 }),
     [],
   );
+  const studioFace = useMemo(acousticWallMaterial, []);
+  const clubFace = useMemo(
+    () => new THREE.MeshStandardMaterial({ color: '#1a1a24', roughness: 0.9 }),
+    [],
+  );
   return (
     <group>
       {/* wall segments either side of the doorway */}
@@ -129,6 +135,19 @@ function Partition() {
       <mesh position={[PARTITION.x, (H + 3) / 2, 0]} material={wallMat}>
         <boxGeometry args={[t, H - 3, dh * 2]} />
       </mesh>
+      {/* zone-matched faces: acoustic on studio side, dark matte on club side */}
+      <mesh position={[PARTITION.x - t / 2 - 0.01, H / 2, -sideCenter]} rotation={[0, -Math.PI / 2, 0]} material={studioFace}>
+        <planeGeometry args={[sideLen, H]} />
+      </mesh>
+      <mesh position={[PARTITION.x - t / 2 - 0.01, H / 2, sideCenter]} rotation={[0, -Math.PI / 2, 0]} material={studioFace}>
+        <planeGeometry args={[sideLen, H]} />
+      </mesh>
+      <mesh position={[PARTITION.x + t / 2 + 0.01, H / 2, -sideCenter]} rotation={[0, Math.PI / 2, 0]} material={clubFace}>
+        <planeGeometry args={[sideLen, H]} />
+      </mesh>
+      <mesh position={[PARTITION.x + t / 2 + 0.01, H / 2, sideCenter]} rotation={[0, Math.PI / 2, 0]} material={clubFace}>
+        <planeGeometry args={[sideLen, H]} />
+      </mesh>
       {/* doorway glow frame */}
       <mesh position={[PARTITION.x, 3.02, 0]}>
         <boxGeometry args={[t + 0.08, 0.06, dh * 2 + 0.1]} />
@@ -140,24 +159,24 @@ function Partition() {
           <meshStandardMaterial color="#ff2d95" emissive="#ff2d95" emissiveIntensity={2.5} />
         </mesh>
       ))}
-      {/* labels above the doorway, one facing each zone */}
+      {/* labels above the doorway — each names the room you're entering */}
       <Text
         position={[-t / 2 - 0.02, 3.5, 0]}
         rotation={[0, -Math.PI / 2, 0]}
-        fontSize={0.4}
-        color="#ffd9a8"
-        anchorX="center"
-      >
-        RECORDING STUDIO
-      </Text>
-      <Text
-        position={[t / 2 + 0.02, 3.5, 0]}
-        rotation={[0, Math.PI / 2, 0]}
         fontSize={0.4}
         color="#00e5ff"
         anchorX="center"
       >
         DJ CLUB
+      </Text>
+      <Text
+        position={[t / 2 + 0.02, 3.5, 0]}
+        rotation={[0, Math.PI / 2, 0]}
+        fontSize={0.4}
+        color="#ffd9a8"
+        anchorX="center"
+      >
+        RECORDING STUDIO
       </Text>
     </group>
   );
@@ -209,9 +228,9 @@ function Truss() {
                 spots.current[i] = el;
               }}
               position={[x, 5.3, z]}
-              angle={0.5}
+              angle={0.6}
               penumbra={0.6}
-              intensity={30}
+              intensity={200}
               distance={20}
               color={SPOT_COLORS[i]}
             />
@@ -235,7 +254,7 @@ export function Shell() {
   const concrete = useMemo(concreteFloorMaterial, []);
   const slat = useMemo(woodSlatMaterial, []);
   const darkWall = useMemo(
-    () => new THREE.MeshStandardMaterial({ color: '#0e0e14', roughness: 0.9 }),
+    () => new THREE.MeshStandardMaterial({ color: '#1a1a24', roughness: 0.9 }),
     [],
   );
   const ceilingMat = useMemo(
