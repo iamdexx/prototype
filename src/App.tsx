@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef } from 'react';
-import { Canvas, useFrame } from '@react-three/fiber';
+import { Canvas, useFrame, type RootState } from '@react-three/fiber';
 import { XR, createXRStore } from '@react-three/xr';
+import { EffectComposer, Bloom, Vignette } from '@react-three/postprocessing';
 import { Studio } from './world/Studio';
 import { DesktopControls } from './controls/DesktopControls';
 import { GamepadControls } from './controls/GamepadControls';
@@ -21,9 +22,21 @@ import { audioEngine } from './audio/engine';
 import { useMic } from './audio/useMic';
 import { useScreenShare } from './share/useScreenShare';
 import { useShareStore } from './share/shareStore';
+import { useQuality } from './state/quality';
+import { useWorldStore } from './state/worldStore';
+import { DJ_BOARD_POSITION } from './world/layout';
+import { ZONES } from './world/zones';
+import { Fade } from './ui/Fade';
 
 const isTouchDevice =
   typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
+
+// Dev-only QA hooks: window.__player (zustand store) + window.__r3f (RootState).
+const devWindow = window as unknown as Record<string, unknown>;
+if (import.meta.env.DEV) {
+  devWindow.__player = usePlayerStore;
+  devWindow.__world = useWorldStore;
+}
 
 function buildStateMessage(): PeerStateMessage {
   const s = usePlayerStore.getState();
@@ -38,6 +51,7 @@ function buildStateMessage(): PeerStateMessage {
     mouthOpen: s.mouthOpen,
     name: s.displayName,
     wallet: walletInfo.short,
+    zone: useWorldStore.getState().zone,
   };
 }
 
@@ -45,6 +59,18 @@ function buildStateMessage(): PeerStateMessage {
 function MicSampler({ sample }: { sample: () => number }) {
   useFrame(() => sample());
   return null;
+}
+
+/** Post-processing gated by device quality / XR session / ?fx=0. */
+function PostFX() {
+  const { postprocessing } = useQuality();
+  if (!postprocessing) return null;
+  return (
+    <EffectComposer enableNormalPass={false} multisampling={0}>
+      <Bloom luminanceThreshold={0.9} intensity={0.8} mipmapBlur />
+      <Vignette darkness={0.6} offset={0.3} />
+    </EffectComposer>
+  );
 }
 
 export default function App() {
@@ -60,6 +86,7 @@ export default function App() {
   const mic = useMic();
   const share = useScreenShare(() => meshRef.current);
   const sharing = useShareStore((s) => s.sharing);
+  const zone = useWorldStore((s) => s.zone);
 
   useEffect(() => {
     const mesh = new PeerMesh(roomFromUrl(), buildStateMessage);
@@ -86,14 +113,24 @@ export default function App() {
     <div style={{ width: '100%', height: '100%', position: 'relative' }}>
       <Canvas
         shadows
-        camera={{ position: [0, 1.6, 8], fov: 70, near: 0.05, far: 100 }}
+        gl={{ antialias: true, powerPreference: 'high-performance' }}
+        camera={{
+          position: [ZONES[useWorldStore.getState().zone].spawn[0], 1.6, ZONES[useWorldStore.getState().zone].spawn[2]],
+          rotation: [0, ZONES[useWorldStore.getState().zone].spawnYaw, 0],
+          fov: 70,
+          near: 0.05,
+          far: 6000,
+        }}
         style={{ flex: 1 }}
+        onCreated={(state: RootState) => {
+          if (import.meta.env.DEV) devWindow.__r3f = state;
+        }}
       >
         <XR store={xrStore}>
           <color attach="background" args={['#0b0b10']} />
-          <fog attach="fog" args={['#0b0b10', 20, 45]} />
+          <fog attach="fog" args={['#0b0b10', 30, 200]} />
           <Studio />
-          <DJBoard position={[0, 0.5, -8]} />
+          {zone === 'club' && <DJBoard position={DJ_BOARD_POSITION} />}
           <RemoteAvatars />
           <SharePanels getMesh={() => meshRef.current} />
           <DesktopControls xrStore={xrStore} />
@@ -101,9 +138,11 @@ export default function App() {
           <VRRig store={xrStore} />
           <SpatialAudioSync />
           <MicSampler sample={mic.sampleMouth} />
+          <PostFX />
         </XR>
       </Canvas>
       {isTouchDevice && <TouchControls />}
+      <Fade />
       <NamePrompt />
       <HUD
         xrStore={xrStore}

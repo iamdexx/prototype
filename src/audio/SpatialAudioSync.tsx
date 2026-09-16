@@ -5,6 +5,7 @@ import { audioEngine } from './engine';
 import { usePeersStore } from '../net/peersStore';
 import { usePlayerStore } from '../state/playerStore';
 import { isInsideBooth } from '../world/booth';
+import { useWorldStore } from '../state/worldStore';
 import type { Vec3 } from '../state/playerStore';
 
 const fwd = new THREE.Vector3();
@@ -41,23 +42,29 @@ export function SpatialAudioSync() {
     up.set(0, 1, 0).applyQuaternion(camera.quaternion);
     const lp = usePlayerStore.getState().headPosition;
     const localPos: Vec3 = [lp[0], lp[1], lp[2]];
+    const localZone = useWorldStore.getState().zone;
     const localInBooth = isInsideBooth(localPos);
 
     for (const p of Object.values(usePeersStore.getState().peers)) {
       if (p.state) {
         const hp = p.state.headPosition;
+        const pz = p.state.zone ?? 'studio'; // default for older clients
         audioEngine.setSourcePosition(`${p.id}:mic`, hp);
         audioEngine.setSourcePosition(`${p.id}:screen`, hp);
+        audioEngine.setSourceZone(`${p.id}:mic`, pz);
+        audioEngine.setSourceZone(`${p.id}:screen`, pz);
       }
     }
-    // Screenshare panels are spatial sources at the panel location.
-    for (const [pid, panel] of Object.entries(usePeersStore.getState().panels)) {
-      if (audioEngine.hasSource(`${panel.owner}:screen`)) {
-        audioEngine.setSourcePosition(`${panel.owner}:screen`, panel.position);
+    // Screenshare audio lives where its panel is, not where its owner walked to.
+    for (const panel of Object.values(usePeersStore.getState().panels)) {
+      if (panel.kind !== 'screen') continue;
+      const key = `${panel.owner}:screen`;
+      if (audioEngine.hasSource(key)) {
+        audioEngine.setSourcePosition(key, panel.position);
+        audioEngine.setSourceZone(key, panel.zone ?? 'studio');
       }
-      void pid;
     }
-    audioEngine.update(localPos, fwd, up, localInBooth);
+    audioEngine.update(localPos, fwd, up, localInBooth, localZone);
   });
 
   void panels;

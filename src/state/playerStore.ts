@@ -1,4 +1,6 @@
 import { create } from 'zustand';
+import { ZONES } from '../world/zones';
+import { useWorldStore } from './worldStore';
 
 export type Vec3 = [number, number, number];
 
@@ -27,10 +29,12 @@ export interface PlayerState {
 const savedName =
   typeof localStorage !== 'undefined' ? localStorage.getItem('ape-studio-name') ?? '' : '';
 
+const initialZone = ZONES[useWorldStore.getState().zone];
+
 export const usePlayerStore = create<PlayerState>((set) => ({
-  position: [0, 0, 8],
-  yaw: Math.PI,
-  headPosition: [0, 1.6, 8],
+  position: initialZone.spawn,
+  yaw: initialZone.spawnYaw,
+  headPosition: [initialZone.spawn[0], 1.6, initialZone.spawn[2]],
   headQuaternion: [0, 0, 0, 1],
   mouthOpen: 0,
   displayName: savedName,

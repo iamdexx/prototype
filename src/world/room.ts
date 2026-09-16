@@ -1,20 +1,19 @@
 import type { Vec3 } from '../state/playerStore';
+import { useWorldStore } from '../state/worldStore';
+import { ZONES, clampToZone, type ZoneId } from './zones';
 
-/** Studio interior: 30m (x) x 6m (y) x 20m (z), centered at origin. */
+/** Kept for backward compatibility — zone bounds now live in zones.ts. */
 export const ROOM = {
-  width: 30,
+  width: 24,
   height: 6,
-  depth: 20,
-  /** Margin from walls the player capsule cannot cross. */
+  depth: 16,
   margin: 0.6,
 };
 
+/** Clamp to the CURRENT zone (room + its portal hallway). */
 export function clampToRoom(pos: Vec3): Vec3 {
-  const hx = ROOM.width / 2 - ROOM.margin;
-  const hz = ROOM.depth / 2 - ROOM.margin;
-  return [
-    Math.min(hx, Math.max(-hx, pos[0])),
-    Math.max(0, Math.min(ROOM.height - ROOM.margin, pos[1])),
-    Math.min(hz, Math.max(-hz, pos[2])),
-  ];
+  return clampToZone(useWorldStore.getState().zone, pos);
 }
+
+export { clampToZone, ZONES };
+export type { ZoneId };

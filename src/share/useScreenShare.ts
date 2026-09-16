@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import type { PeerMesh } from '../net/mesh';
 import { useShareStore } from './shareStore';
 import { usePeersStore } from '../net/peersStore';
+import { useWorldStore } from '../state/worldStore';
 import type { PanelTransform } from '../net/protocol';
 
 let panelSeq = 0;
@@ -13,8 +14,20 @@ let panelSeq = 0;
 export function useScreenShare(getMesh: () => PeerMesh | null) {
   const setSharing = useShareStore((s) => s.setSharing);
 
+  /** Drop this client's live-stream panels so only one exists per owner. */
+  const removeOwnScreenPanels = useCallback(() => {
+    const store = usePeersStore.getState();
+    for (const p of Object.values(store.panels)) {
+      if (p.owner === store.selfId && p.kind === 'screen') {
+        store.removePanel(p.id);
+        getMesh()?.broadcastPanel(null, p.id);
+      }
+    }
+  }, [getMesh]);
+
   const spawnPanel = useCallback(
     (kind: string, src: string): PanelTransform => {
+      if (kind === 'screen') removeOwnScreenPanels();
       const self = usePeersStore.getState().selfId;
       const panel: PanelTransform = {
         id: `${self}-${Date.now()}-${panelSeq++}`,
@@ -24,12 +37,13 @@ export function useScreenShare(getMesh: () => PeerMesh | null) {
         kind,
         src,
         owner: self,
+        zone: useWorldStore.getState().zone,
       };
       usePeersStore.getState().setPanel(panel);
       getMesh()?.broadcastPanel(panel, panel.id);
       return panel;
     },
-    [getMesh],
+    [getMesh, removeOwnScreenPanels],
   );
 
   const startScreen = useCallback(async () => {
@@ -40,11 +54,12 @@ export function useScreenShare(getMesh: () => PeerMesh | null) {
     stream.getVideoTracks()[0]?.addEventListener('ended', () => {
       getMesh()?.shareScreen(null);
       setSharing(null);
+      removeOwnScreenPanels();
     });
     setSharing(stream);
     getMesh()?.shareScreen(stream);
     spawnPanel('screen', '');
-  }, [getMesh, setSharing, spawnPanel]);
+  }, [getMesh, setSharing, spawnPanel, removeOwnScreenPanels]);
 
   /** VR fallback: share the headset's rear camera as a pseudo-screen. */
   const shareCamera = useCallback(async () => {
@@ -67,7 +82,8 @@ export function useScreenShare(getMesh: () => PeerMesh | null) {
     s?.getTracks().forEach((t) => t.stop());
     getMesh()?.shareScreen(null);
     setSharing(null);
-  }, [getMesh, setSharing]);
+    removeOwnScreenPanels();
+  }, [getMesh, setSharing, removeOwnScreenPanels]);
 
   return { startScreen, shareCamera, shareImageOrUrl, stop, spawnPanel };
 }
