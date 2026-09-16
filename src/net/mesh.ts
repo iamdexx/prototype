@@ -1,6 +1,7 @@
 import Peer, { type DataConnection, type MediaConnection } from 'peerjs';
 import { hostIdForRoom, type NetMessage, type PanelTransform, type PeerStateMessage } from './protocol';
 import { usePeersStore } from './peersStore';
+import { audioEngine } from '../audio/engine';
 
 type CallKind = 'mic' | 'screen';
 
@@ -70,7 +71,7 @@ export class PeerMesh {
     });
     peer.on('connection', (conn) => this.handleData(conn));
     peer.on('call', (call) => {
-      call.answer(this.outgoingMedia ?? undefined);
+      call.answer(this.outgoingMedia ?? audioEngine.outgoingStream ?? undefined);
       this.wireCall(call);
     });
     peer.on('disconnected', () => {
@@ -93,7 +94,7 @@ export class PeerMesh {
     const conn = this.peer.connect(peerId, { reliable: true });
     this.handleData(conn);
     // Media call: send our mic/dj mix both ways.
-    const call = this.peer.call(peerId, this.outgoingMedia ?? new MediaStream(), {
+    const call = this.peer.call(peerId, this.outgoingMedia ?? audioEngine.outgoingStream ?? new MediaStream(), {
       metadata: { kind: 'mic' satisfies CallKind },
     });
     if (call) this.wireCall(call);

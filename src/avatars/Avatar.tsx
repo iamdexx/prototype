@@ -1,7 +1,7 @@
 import { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import { Text } from '@react-three/drei';
+import { Billboard, Text } from '@react-three/drei';
 import type { PeerStateMessage } from '../net/protocol';
 
 const SKIN = '#8a5a3b';
@@ -103,16 +103,17 @@ export function Avatar({ state }: { state: PeerStateMessage }) {
           <meshStandardMaterial color="#521818" />
         </mesh>
         {/* nametag */}
-        <Text
-          position={[0, 0.28, 0]}
-          fontSize={0.09}
-          color="#fff"
-          outlineWidth={0.006}
-          outlineColor="#000"
-          anchorX="center"
-        >
-          {state.name || state.wallet || 'anon'}
-        </Text>
+        <Billboard position={[0, 0.28, 0]}>
+          <Text
+            fontSize={0.09}
+            color="#fff"
+            outlineWidth={0.006}
+            outlineColor="#000"
+            anchorX="center"
+          >
+            {state.name || state.wallet || 'anon'}
+          </Text>
+        </Billboard>
       </group>
       {showHands && (
         <>
