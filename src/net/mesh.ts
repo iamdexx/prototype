@@ -75,7 +75,7 @@ export class PeerMesh {
       this.wireCall(call);
     });
     peer.on('disconnected', () => {
-      if (!this.destroyed) peer.reconnect();
+      if (!this.destroyed && !peer.destroyed) peer.reconnect();
     });
     peer.on('error', (err) => {
       const e = err as { type?: string; message?: string };
