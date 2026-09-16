@@ -57,6 +57,7 @@ export function SpatialAudioSync() {
     }
     // Screenshare audio lives where its panel is, not where its owner walked to.
     for (const panel of Object.values(usePeersStore.getState().panels)) {
+      if (panel.kind !== 'screen') continue;
       const key = `${panel.owner}:screen`;
       if (audioEngine.hasSource(key)) {
         audioEngine.setSourcePosition(key, panel.position);
