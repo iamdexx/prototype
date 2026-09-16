@@ -30,12 +30,22 @@ npm run lint    # eslint (typescript-eslint flat config)
 
 ## Features
 
-- **Studio world** — a 30m x 6m x 20m recording studio: control-room desk with
-  mixing console + knobs, speaker monitors, a raised stage/DJ platform, and a
-  glass-walled **soundproof vocal booth**. Player position is clamped to the
-  room interior. When you are inside the booth, all remote audio from outside
-  is low-pass filtered + attenuated, and vice versa (per-source
-  `BiquadFilterNode`, evaluated each frame).
+- **Two-zone venue** — a 52m x 6m x 24m space split by a partition wall with a
+  5m doorway at the center. Left zone (x<0) is the **recording studio**: wood
+  plank floors, acoustic-foam walls, control-room mixing desk with knobs,
+  nearfield + wall monitors, a "live room" window behind the desk, a
+  glass-walled **soundproof vocal booth**, and lounge/gear props (couch, 19"
+  racks, synth, drum kit, guitars, gold plaques). Right zone (x>0) is the
+  **DJ club**: concrete floor with an animated LED tile dance floor, raised DJ
+  stage with the two-deck board, an animated LED video wall, PA stacks, a bar
+  with glowing bottles, a lounge corner with neon sign, and a truss with
+  color-cycling spotlights. Player position is clamped to the room interior
+  and the partition (except the doorway). Bloom/vignette post-processing is
+  enabled on capable devices — append `?fx=0` to the URL to disable it (it is
+  also auto-disabled in XR sessions and on very low-end devices).
+- **Vocal booth audio isolation** — when you are inside the booth, all remote
+  audio from outside is low-pass filtered + attenuated, and vice versa
+  (per-source `BiquadFilterNode`, evaluated each frame).
 - **Multiplayer** — PeerJS full mesh. The first peer in a room claims the
   deterministic id `ape-studio-<room>-host` and relays the peer list so late
   joiners form a mesh (fine for ~8 people). State is broadcast at 15 Hz:

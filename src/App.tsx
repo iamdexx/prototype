@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef } from 'react';
-import { Canvas, useFrame } from '@react-three/fiber';
+import { Canvas, useFrame, type RootState } from '@react-three/fiber';
 import { XR, createXRStore } from '@react-three/xr';
+import { EffectComposer, Bloom, Vignette } from '@react-three/postprocessing';
 import { Studio } from './world/Studio';
 import { DesktopControls } from './controls/DesktopControls';
 import { GamepadControls } from './controls/GamepadControls';
@@ -21,9 +22,15 @@ import { audioEngine } from './audio/engine';
 import { useMic } from './audio/useMic';
 import { useScreenShare } from './share/useScreenShare';
 import { useShareStore } from './share/shareStore';
+import { useQuality } from './state/quality';
+import { DJ_BOARD_POSITION } from './world/layout';
 
 const isTouchDevice =
   typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
+
+// Dev-only QA hooks: window.__player (zustand store) + window.__r3f (RootState).
+const devWindow = window as unknown as Record<string, unknown>;
+if (import.meta.env.DEV) devWindow.__player = usePlayerStore;
 
 function buildStateMessage(): PeerStateMessage {
   const s = usePlayerStore.getState();
@@ -45,6 +52,18 @@ function buildStateMessage(): PeerStateMessage {
 function MicSampler({ sample }: { sample: () => number }) {
   useFrame(() => sample());
   return null;
+}
+
+/** Post-processing gated by device quality / XR session / ?fx=0. */
+function PostFX() {
+  const { postprocessing } = useQuality();
+  if (!postprocessing) return null;
+  return (
+    <EffectComposer enableNormalPass={false} multisampling={0}>
+      <Bloom luminanceThreshold={0.9} intensity={0.8} mipmapBlur />
+      <Vignette darkness={0.6} offset={0.3} />
+    </EffectComposer>
+  );
 }
 
 export default function App() {
@@ -86,14 +105,18 @@ export default function App() {
     <div style={{ width: '100%', height: '100%', position: 'relative' }}>
       <Canvas
         shadows
-        camera={{ position: [0, 1.6, 8], fov: 70, near: 0.05, far: 100 }}
+        gl={{ antialias: true, powerPreference: 'high-performance' }}
+        camera={{ position: [-10, 1.6, 8], fov: 70, near: 0.05, far: 100 }}
         style={{ flex: 1 }}
+        onCreated={(state: RootState) => {
+          if (import.meta.env.DEV) devWindow.__r3f = state;
+        }}
       >
         <XR store={xrStore}>
           <color attach="background" args={['#0b0b10']} />
           <fog attach="fog" args={['#0b0b10', 20, 45]} />
           <Studio />
-          <DJBoard position={[0, 0.5, -8]} />
+          <DJBoard position={DJ_BOARD_POSITION} />
           <RemoteAvatars />
           <SharePanels getMesh={() => meshRef.current} />
           <DesktopControls xrStore={xrStore} />
@@ -101,6 +124,7 @@ export default function App() {
           <VRRig store={xrStore} />
           <SpatialAudioSync />
           <MicSampler sample={mic.sampleMouth} />
+          <PostFX />
         </XR>
       </Canvas>
       {isTouchDevice && <TouchControls />}

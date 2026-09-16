@@ -84,6 +84,20 @@ export function Avatar({ state }: { state: PeerStateMessage }) {
       </group>
       {/* head (separate so head pose is exact) */}
       <group ref={head}>
+        {/* torso capsule under the head, darker shade */}
+        <mesh position={[0, -0.38, 0]} castShadow>
+          <capsuleGeometry args={[0.18, 0.4, 6, 12]} />
+          <meshStandardMaterial color="#3d55c8" roughness={0.7} />
+        </mesh>
+        {/* emissive rim ring around the neck */}
+        <mesh position={[0, -0.16, 0]} rotation={[Math.PI / 2, 0, 0]}>
+          <torusGeometry args={[0.09, 0.012, 8, 24]} />
+          <meshStandardMaterial
+            color={SHIRT}
+            emissive={SHIRT}
+            emissiveIntensity={1.6}
+          />
+        </mesh>
         <mesh castShadow>
           <sphereGeometry args={[0.14, 20, 16]} />
           <meshStandardMaterial color={SKIN} roughness={0.6} />

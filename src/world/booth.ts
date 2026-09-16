@@ -1,15 +1,15 @@
 import type { Vec3 } from '../state/playerStore';
 
 /**
- * Vocal booth: a glass-walled box in a corner of the studio.
- * 4x4m footprint, 3m high, with a door opening on the -x facing wall.
+ * Vocal booth: a glass-walled box in the studio's far-left corner.
+ * 4x4m footprint, 3m high, with a door opening on the +x facing wall.
  */
 export const BOOTH = {
   /** Center of the booth floor (world space). */
-  center: [11, 0, -6.5] as Vec3,
+  center: [-21, 0, -7] as Vec3,
   /** Half extents of the booth interior. */
   half: [2, 1.5, 2] as Vec3,
-  /** Door opening: on the wall facing -x, centered at z = -6.5, width 0.9m. */
+  /** Door opening: on the wall facing +x, centered at z = -7, width 0.9m. */
   doorWidth: 0.9,
 };
 
